@@ -1,13 +1,17 @@
 import os,sys
 import cv2
-import face_recognition
+import faces_recognition
 import numpy as np
 import math
 import json
 import dlib
 
+
 def face_landmarks():
     video_capture = cv2.VideoCapture(0)
+
+    if not video_capture.isOpened():
+        sys.exit('Камера не найдена')
 
     detector = dlib.get_frontal_face_detector()
 

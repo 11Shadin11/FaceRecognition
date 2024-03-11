@@ -4,10 +4,7 @@ import face_recognition
 import numpy as np
 import math
 import json
-import generate_data_set
-from tkinter import *
-from tkinter import ttk
-
+import dialog_window_module
 
 
 def face_confidence(face_distance, face_match_threshold=0.6):
@@ -22,17 +19,7 @@ def face_confidence(face_distance, face_match_threshold=0.6):
 
 
 def show_init_window():
-    window = Tk()
-    window.title('Init Window')
-    window.geometry("300x500")
-
-    btn_dataset = ttk.Button(text='Пополнить Dataset', command=generate_data_set.generate_data_from_camera())
-    btn_video_recognition = ttk.Button(text='Начать распознавание', command=start_init)
-
-    btn_dataset.pack()
-    btn_video_recognition.pack()
-
-    window.mainloop()
+    dialog_window_module.open_init_window()
 
 
 def start_init():
@@ -48,6 +35,7 @@ class FaceRecognition:
     process_current_frame = True
 
     def __init__(self):
+        self.face_names = []
         self.encode_faces()
 
     def encode_faces(self):
@@ -55,16 +43,17 @@ class FaceRecognition:
             faces_dataset = json.load(fh)
 
         for image in os.listdir('faces'):
-            face_image = face_recognition.load_image_file(f'faces/{image}')
-            face_encoding = face_recognition.face_encodings(face_image)
-            if face_encoding:
-                face_encoding = face_encoding[0]
-            else:
-                continue
+            for i in os.listdir(f'faces/{image}'):
+                face_image = face_recognition.load_image_file(f'faces/{image}/{i}')
+                face_encoding = face_recognition.face_encodings(face_image)
+                if face_encoding:
+                    face_encoding = face_encoding[0]
+                else:
+                    continue
 
-            self.know_face_encodings.append(face_encoding)
-            name = faces_dataset.get(image)
-            self.know_face_names.append(name)
+                self.know_face_encodings.append(face_encoding)
+                name = faces_dataset.get(i)
+                self.know_face_names.append(name)
 
     def run_recognition(self):
 
@@ -75,9 +64,6 @@ class FaceRecognition:
 
         while True:
             ret, frame = video_capture.read()
-            # os.mkdir("faces/Shadin")
-            # for i in range(10):
-                # generate_data_set.generate_data_from_camera(frame=frame, i=i)
 
             if self.process_current_frame:
                 small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
@@ -86,8 +72,6 @@ class FaceRecognition:
                 # Нахождение всех лиц в обьективе
                 self.face_locations = face_recognition.face_locations(rgb_small_frame)
                 self.face_encodings = face_recognition.face_encodings(rgb_small_frame, self.face_locations)
-
-                self.face_names = []
                 for face_encoding in self.face_encodings:
                     matches = face_recognition.compare_faces(self.know_face_encodings, face_encoding)
                     name = 'Неизвестный'
@@ -125,5 +109,5 @@ class FaceRecognition:
 
 if __name__ == '__main__':
     show_init_window()
-#     fr = FaceRecognition()
-#     fr.run_recognition()
+    # fr = FaceRecognition()
+    # fr.run_recognition()
