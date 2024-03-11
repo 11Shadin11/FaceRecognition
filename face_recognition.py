@@ -1,9 +1,13 @@
-import os,sys
+import os, sys
 import cv2
 import face_recognition
 import numpy as np
 import math
 import json
+import generate_data_set
+from tkinter import *
+from tkinter import ttk
+
 
 
 def face_confidence(face_distance, face_match_threshold=0.6):
@@ -11,15 +15,30 @@ def face_confidence(face_distance, face_match_threshold=0.6):
     line_val = (1.0 - face_distance) / (range * 2.0)
 
     if face_distance > face_match_threshold:
-        # print("Зашел в первый блок")
         return str(round(line_val * 100, 2)) + '%'
     else:
-        # print('------------------')
-        # print(face_distance)
-        # print(face_match_threshold)
-        # print("Зашел во второй блок")
         value = (line_val + ((1.0 - line_val) * math.pow((line_val - 0.5) * 2, 0.2))) * 100
-        return  str(round(value, 2)) + '%'
+        return str(round(value, 2)) + '%'
+
+
+def show_init_window():
+    window = Tk()
+    window.title('Init Window')
+    window.geometry("300x500")
+
+    btn_dataset = ttk.Button(text='Пополнить Dataset', command=generate_data_set.generate_data_from_camera())
+    btn_video_recognition = ttk.Button(text='Начать распознавание', command=start_init)
+
+    btn_dataset.pack()
+    btn_video_recognition.pack()
+
+    window.mainloop()
+
+
+def start_init():
+    fr = FaceRecognition()
+    fr.run_recognition()
+
 
 class FaceRecognition:
     face_locations = []
@@ -37,13 +56,18 @@ class FaceRecognition:
 
         for image in os.listdir('faces'):
             face_image = face_recognition.load_image_file(f'faces/{image}')
-            face_encoding = face_recognition.face_encodings(face_image)[0]
+            face_encoding = face_recognition.face_encodings(face_image)
+            if face_encoding:
+                face_encoding = face_encoding[0]
+            else:
+                continue
 
             self.know_face_encodings.append(face_encoding)
             name = faces_dataset.get(image)
             self.know_face_names.append(name)
 
     def run_recognition(self):
+
         video_capture = cv2.VideoCapture(0)
 
         if not video_capture.isOpened():
@@ -51,9 +75,12 @@ class FaceRecognition:
 
         while True:
             ret, frame = video_capture.read()
+            # os.mkdir("faces/Shadin")
+            # for i in range(10):
+                # generate_data_set.generate_data_from_camera(frame=frame, i=i)
 
             if self.process_current_frame:
-                small_frame = cv2.resize(frame, (0,0), fx=0.25, fy=0.25)
+                small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
                 rgb_small_frame = small_frame[:, :, ::-1]
 
                 # Нахождение всех лиц в обьективе
@@ -71,8 +98,6 @@ class FaceRecognition:
 
                     if matches[best_match_index]:
                         name = self.know_face_names[best_match_index]
-                        print(face_distances)
-                        print(face_distances[best_match_index])
                         confidence = face_confidence(face_distances[best_match_index])
 
                     self.face_names.append(f'{name} ({confidence})')
@@ -97,6 +122,8 @@ class FaceRecognition:
         video_capture.release()
         cv2.destroyAllWindows()
 
+
 if __name__ == '__main__':
-    fr = FaceRecognition()
-    fr.run_recognition()
+    show_init_window()
+#     fr = FaceRecognition()
+#     fr.run_recognition()
