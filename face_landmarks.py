@@ -1,9 +1,5 @@
-import os,sys
+import sys
 import cv2
-import faces_recognition
-import numpy as np
-import math
-import json
 import dlib
 
 

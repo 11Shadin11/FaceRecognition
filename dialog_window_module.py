@@ -6,8 +6,10 @@ import cv2
 import faces_recognition
 
 window = Tk()
+
+
 def open_init_window():
-    window.title('Init Window')
+    window.title('😁😁')
     window.geometry("300x150")
 
     label = Label(text="Выберите действие")
@@ -25,7 +27,7 @@ def open_init_window():
 
 def open_dataset_window():
     dataset_window = Toplevel(window)
-    dataset_window.title("Пополнить dataset")
+    dataset_window.title("Пополнение dataset")
     dataset_window.geometry("300x300")
 
     def_folder = StringVar()
@@ -38,7 +40,7 @@ def open_dataset_window():
 
     label_dataset = Label(dataset_window, text="Выберите dataset, который нужно пополнить")
     label_dataset.pack(anchor=CENTER, padx=6, pady=6)
-    combobox = ttk.Combobox(dataset_window, textvariable="Rustam", values=folders)
+    combobox = ttk.Combobox(dataset_window, text=folders[0], values=folders)
     combobox.pack(anchor=CENTER, padx=6, pady=6)
 
     recording_btn = ttk.Button(dataset_window, text='Recording', command=lambda: start_recording(combobox.get()))
@@ -54,7 +56,7 @@ def start_recording(directory):
     fps = int(cap.get(cv2.CAP_PROP_FPS))
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(f'faces/{directory}/dataset_{directory}.avi', fourcc, fps, (width, height))
+    out = cv2.VideoWriter(f'faces/dataset_{directory}.avi', fourcc, fps, (width, height))
 
     start_time = cv2.getTickCount()
     while (cv2.getTickCount() - start_time) / cv2.getTickFrequency() < 5:
@@ -71,4 +73,5 @@ def start_recording(directory):
     out.release()
     cv2.destroyAllWindows()
 
-    generate_data_set.generate_data_from_camera(directory)
+    # generate_data_set.video_capture(directory)
+    generate_data_set.DataSetGen(directory)
