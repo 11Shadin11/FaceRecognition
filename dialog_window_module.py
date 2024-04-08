@@ -56,7 +56,10 @@ def start_recording(directory):
     fps = int(cap.get(cv2.CAP_PROP_FPS))
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(f'faces/dataset_{directory}.avi', fourcc, fps, (width, height))
+    if not os.path.exists(f'faces/{directory}'):
+        os.mkdir(f'faces/{directory}')
+
+    out = cv2.VideoWriter(f'faces/{directory}/dataset_{directory}.avi', fourcc, fps, (width, height))
 
     start_time = cv2.getTickCount()
     while (cv2.getTickCount() - start_time) / cv2.getTickFrequency() < 5:
