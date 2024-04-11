@@ -14,7 +14,6 @@ def open_init_window():
 
     label = Label(text="Выберите действие")
 
-    # btn_dataset = ttk.Button(text='Пополнить Dataset', command=generate_data_set.generate_data_from_camera())
     btn_dataset = ttk.Button(text='Пополнить Dataset', command=open_dataset_window)
     btn_video_recognition = ttk.Button(text='Начать распознавание', command=faces_recognition.start_init)
 
@@ -30,17 +29,15 @@ def open_dataset_window():
     dataset_window.title("Пополнение dataset")
     dataset_window.geometry("300x300")
 
-    def_folder = StringVar()
     folders = []
     for item in os.listdir('faces'):
         if os.path.isdir(os.path.join('faces', item)):
             folders.append(item)
-    if folders:
-        def_folder.set(folders[0])
 
     label_dataset = Label(dataset_window, text="Выберите dataset, который нужно пополнить")
     label_dataset.pack(anchor=CENTER, padx=6, pady=6)
-    combobox = ttk.Combobox(dataset_window, text=folders[0], values=folders)
+
+    combobox = ttk.Combobox(dataset_window, values=folders)
     combobox.pack(anchor=CENTER, padx=6, pady=6)
 
     recording_btn = ttk.Button(dataset_window, text='Recording', command=lambda: start_recording(combobox.get()))
