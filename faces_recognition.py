@@ -46,6 +46,7 @@ class FaceRecognition:
         if os.path.isfile('faces/encoded_faces.pkl'):
             with open('faces/encoded_faces.pkl', 'rb') as f:
                 self.known_faces = pickle.load(f)
+                self.run_recognition()
         else:
             total_images = sum([len(files) for r, d, files in os.walk('faces/')])
             progress_window = tk.Toplevel()
