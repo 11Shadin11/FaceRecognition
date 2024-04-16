@@ -1,8 +1,11 @@
-import itertools
-import json
 import math
-import os
 import sys
+import threading
+
+import tkinter as tk
+from tkinter import ttk
+import pickle
+import os
 
 import cv2
 import face_recognition
@@ -27,7 +30,7 @@ def show_init_window():
 
 def start_init():
     fr = FaceRecognition()
-    fr.run_recognition()
+    # fr.run_recognition()
 
 
 class FaceRecognition:
@@ -40,6 +43,22 @@ class FaceRecognition:
         self.encode_faces()
 
     def encode_faces(self):
+        if os.path.isfile('faces/encoded_faces.pkl'):
+            with open('faces/encoded_faces.pkl', 'rb') as f:
+                self.known_faces = pickle.load(f)
+        else:
+            total_images = sum([len(files) for r, d, files in os.walk('faces/')])
+            progress_window = tk.Toplevel()
+            progress_window.title("Encoding Faces")
+            progress_bar = ttk.Progressbar(progress_window, length=500, mode='determinate', maximum=total_images)
+            progress_bar.pack(padx=10, pady=10)
+            progress_label = tk.Label(progress_window, text="0%")
+            progress_label.pack()
+
+            threading.Thread(target=self.process_faces, args=(progress_bar, progress_label, progress_window)).start()
+
+    def process_faces(self, progress_bar, progress_label, progress_window):
+        image_count = 0
         for folder in os.listdir('faces'):
             for image in os.listdir(f'faces/{folder}'):
                 face_image = face_recognition.load_image_file(f'faces/{folder}/{image}')
@@ -48,6 +67,19 @@ class FaceRecognition:
                     face_encoding = face_encoding[0]
 
                 self.known_faces.append({'name': folder, 'encoding': face_encoding})
+
+                image_count += 1
+                progress = image_count / progress_bar['maximum'] * 100
+                progress_bar['value'] = image_count
+                progress_label['text'] = f"{progress:.2f}%"
+                progress_window.update()
+
+        with open('faces/encoded_faces.pkl', 'wb') as f:
+            pickle.dump(self.known_faces, f)
+
+        progress_window.destroy()
+        self.run_recognition()
+
     def run_recognition(self):
 
         video_capture = cv2.VideoCapture(0)
