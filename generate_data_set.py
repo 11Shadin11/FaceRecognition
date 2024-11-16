@@ -17,9 +17,12 @@ class DataSetGen:
 
     def video_capture(self):
 
+        if not os.path.exists(f'faces/{self.sel_dts}'):
+            os.mkdir(f'faces/{self.sel_dts}')
+
         video_cap = cv2.VideoCapture(self.file_directory)
 
-        fps = int(video_cap.get(cv2.CAP_PROP_FPS)) if not self.download_file_path else 20
+        fps = int(video_cap.get(cv2.CAP_PROP_FPS)) if not self.download_file_path else 10
 
         total_frames = int(video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
 

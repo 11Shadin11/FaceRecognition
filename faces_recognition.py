@@ -1,6 +1,7 @@
 import math
 import sys
 import threading
+import time
 
 import tkinter as tk
 from tkinter import ttk
@@ -18,10 +19,10 @@ def face_confidence(face_distance, face_match_threshold=0.6):
     line_val = (1.0 - face_distance) / (range_p * 2.0)
 
     if face_distance > face_match_threshold:
-        return str(round(line_val * 100, 2)) + '%'
+        return round(line_val * 100, 2)
     else:
         value = (line_val + ((1.0 - line_val) * math.pow((line_val - 0.5) * 2, 0.2))) * 100
-        return str(round(value, 2)) + '%'
+        return round(value, 2)
 
 
 def show_init_window():
@@ -47,6 +48,10 @@ class FaceRecognition:
             with open('faces/encoded_faces.pkl', 'rb') as f:
                 self.known_faces = pickle.load(f)
                 self.run_recognition()
+                # self.test('faces/Karina/80.jpg')
+                # test_dataset_path = 'faces/test'
+                # accuracy = self.calculate_accuracy(test_dataset_path)
+                # print(f'Точность распознавания: {accuracy}%')
         else:
             total_images = sum([len(files) for r, d, files in os.walk('faces/')])
             progress_window = tk.Toplevel()
@@ -104,7 +109,7 @@ class FaceRecognition:
                         idx = result.index(True)
                         name = self.known_faces[idx]['name']
                         confidence = face_confidence(face_distances[idx])
-                        match = f'{name} - {confidence}'
+                        match = f'{name} - {confidence}%'
                     else:
                         match = "Undefined"
 
@@ -120,7 +125,7 @@ class FaceRecognition:
                         (face_location[3] + 6, face_location[2] - 6),
                         cv2.FONT_HERSHEY_DUPLEX,
                         0.6,
-                        (0, 0, 0),
+                        (255, 255, 255),
                         1
                     )
 
@@ -131,6 +136,78 @@ class FaceRecognition:
 
         video_capture.release()
         cv2.destroyAllWindows()
+
+    def test(self, img_path):
+        print(img_path)
+        frame = cv2.imread(img_path)
+        frame_img = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)[:, :, ::-1]
+        if frame_img is None:
+            sys.exit('Фотография не найдена')
+
+        face_locations = face_recognition.face_locations(frame)
+        face_encodings = face_recognition.face_encodings(frame, face_locations)
+
+        for face_encoding, face_location in zip(face_encodings, face_locations):
+            result = face_recognition.compare_faces([face['encoding'] for face in self.known_faces], face_encoding)
+
+            face_distances = face_recognition.face_distance([face['encoding'] for face in self.known_faces],
+                                                            face_encoding)
+
+            if True in result:
+                idx = result.index(True)
+                name = self.known_faces[idx]['name']
+                confidence = face_confidence(face_distances[idx])
+                match = f'{name} - {confidence}%'
+            else:
+                match = "Undefined"
+
+            left_top = (face_location[3], face_location[0])
+            right_bottom = (face_location[1], face_location[2])
+
+            color = [0, 255, 0]
+
+            cv2.rectangle(frame, left_top, right_bottom, color, 4)
+            cv2.putText(
+                frame,
+                match,
+                (face_location[3] + 6, face_location[2] - 6),
+                cv2.FONT_HERSHEY_DUPLEX,
+                0.6,
+                (255, 255, 255),
+                1
+            )
+        frame_display = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.imshow('Face Recognition from image', frame_display)
+
+    def calculate_accuracy(self, test_dataset_path):
+        correct_matches_prc = 0
+        total_matches = 0
+
+        for filename in os.listdir(test_dataset_path):
+            test_image_path = os.path.join(test_dataset_path, filename)
+
+            total_time = 0
+            test_image = face_recognition.load_image_file(test_image_path)
+            face_locations = face_recognition.face_locations(test_image)
+            face_encodings = face_recognition.face_encodings(test_image, face_locations)
+            for face_encoding, face_location in zip(face_encodings, face_locations):
+                start_time = time.time()
+                result = face_recognition.compare_faces([face['encoding'] for face in self.known_faces], face_encoding)
+
+                face_distances = face_recognition.face_distance([face['encoding'] for face in self.known_faces],
+                                                                face_encoding)
+
+                if True in result:
+                    idx = result.index(True)
+                    confidence = face_confidence(face_distances[idx])
+                    correct_matches_prc += int(confidence)
+                    end_time = time.time()
+                total_matches += 1
+                total_time += end_time - start_time
+
+        accuracy = correct_matches_prc / total_matches
+        print(f'Среднее скорость обработки кадра: {total_time}')
+        return accuracy
 
 
 if __name__ == '__main__':

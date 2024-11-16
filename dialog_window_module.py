@@ -87,6 +87,7 @@ def open_dataset_window():
     recording_btn.grid_remove()
 
     combobox.bind('<<ComboboxSelected>>', lambda event: update_interface(selected.get(), combobox.get()))
+    combobox.bind('<KeyRelease>', lambda event: update_interface(selected.get(), combobox.get()))
     selected.trace('w', lambda *args: update_interface(selected.get(), combobox.get()))
 
 
