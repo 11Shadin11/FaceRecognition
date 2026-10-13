@@ -1,0 +1,25 @@
+#!/bin/sh
+# Finder launcher. Python and its dependencies stay in the project's environment.
+set -eu
+umask 077
+project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
+runtime="$project_dir/.venv-tk/bin/python"
+if [ ! -x "$runtime" ]; then
+    runtime="$project_dir/.venv/bin/python"
+fi
+if [ ! -x "$runtime" ]; then
+    /usr/bin/osascript -e 'display alert "Окружение Python не найдено" message "Подготовьте .venv-tk по инструкции в README.md рядом с FaceRecognition.app."'
+    exit 1
+fi
+if [ -L "$project_dir/data" ] || [ -L "$project_dir/data/launcher.log" ]; then
+    exit 1
+fi
+mkdir -p "$project_dir/data"
+# Keep the startup log bounded. It contains diagnostics, never camera images.
+if [ -f "$project_dir/data/launcher.log" ] && [ "$(wc -c < "$project_dir/data/launcher.log")" -gt 1048576 ]; then
+    : > "$project_dir/data/launcher.log"
+fi
+if ! "$runtime" -B "$project_dir/faces_recognition.py" >> "$project_dir/data/launcher.log" 2>&1; then
+    /usr/bin/osascript -e 'display alert "Не удалось запустить приложение" message "Подробности в data/launcher.log. Инструкция установки находится в README.md."'
+    exit 1
+fi

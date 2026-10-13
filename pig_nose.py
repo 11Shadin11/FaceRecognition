@@ -1,55 +1,61 @@
-import cv2
-import numpy as np
-import dlib
+"""Optional standalone filter demo; importing it never activates the camera."""
 from math import hypot
 
-# Loading Camera and Nose image and Creating mask
-cap = cv2.VideoCapture(0)
-nose_image = cv2.imread("faces/pig/pig-nose.png")
-_, frame = cap.read()
-rows, cols, _ = frame.shape
-nose_mask = np.zeros((rows, cols), np.uint8)
+from face_app.capture import open_capture
+from face_app.config import PROJECT_ROOT
 
-# Loading Face detector
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-while True:
-    _, frame = cap.read()
-    nose_mask.fill(0)
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    faces = detector(frame)
-    for face in faces:
-        landmarks = predictor(gray_frame, face)
-        # Nose coordinates
-        top_nose = (landmarks.part(29).x, landmarks.part(29).y)
-        center_nose = (landmarks.part(30).x, landmarks.part(30).y)
-        left_nose = (landmarks.part(31).x, landmarks.part(31).y)
-        right_nose = (landmarks.part(35).x, landmarks.part(35).y)
+def overlay_nose(frame, nose, center, width, cv):
+    """Clip both the destination and overlay when the face touches a frame edge."""
+    import numpy as np
 
-        nose_width = int(hypot(left_nose[0] - right_nose[0], left_nose[1] - right_nose[1]) * 1.7)
-        nose_height = int(nose_width * 0.77)
+    height = int(width * 0.77)
+    if width <= 0 or height <= 0:
+        return
+    resized = cv.resize(nose, (width, height))
+    x, y = int(center[0] - width / 2), int(center[1] - height / 2)
+    left, top = max(0, x), max(0, y)
+    right, bottom = min(frame.shape[1], x + width), min(frame.shape[0], y + height)
+    if right <= left or bottom <= top:
+        return
+    cropped = resized[top - y:bottom - y, left - x:right - x]
+    area = frame[top:bottom, left:right]
+    if cropped.shape[2] == 4:
+        alpha = cropped[:, :, 3:4].astype(np.float32) / 255
+        area[:] = (alpha * cropped[:, :, :3] + (1 - alpha) * area).astype(np.uint8)
+    else:
+        mask = cv.cvtColor(cropped, cv.COLOR_BGR2GRAY) > 25
+        area[mask] = cropped[mask]
 
-        # New nose position
-        top_left = (int(center_nose[0] - nose_width / 2), int(center_nose[1] - nose_height / 2))
-        bottom_right = (int(center_nose[0] + nose_width / 2), int(center_nose[1] + nose_height / 2))
-        # Adding the new nose
-        nose_pig = cv2.resize(nose_image, (nose_width, nose_height))
-        nose_pig_gray = cv2.cvtColor(nose_pig, cv2.COLOR_BGR2GRAY)
-        _, nose_mask = cv2.threshold(nose_pig_gray, 25, 255, cv2.THRESH_BINARY_INV)
 
-        nose_area = frame[top_left[1]: top_left[1] + nose_height, top_left[0]: top_left[0] + nose_width]
-        nose_area_no_nose = cv2.bitwise_and(nose_area, nose_area, mask=nose_mask)
-        final_nose = cv2.add(nose_area_no_nose, nose_pig)
+def main():
+    import cv2
+    import dlib
 
-        frame[top_left[1]: top_left[1] + nose_height, top_left[0]: top_left[0] + nose_width] = final_nose
+    nose = cv2.imread(str(PROJECT_ROOT / "faces/pig/pig-nose.png"), cv2.IMREAD_UNCHANGED)
+    if nose is None:
+        raise FileNotFoundError("Для демо нужен файл faces/pig/pig-nose.png.")
+    detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(str(PROJECT_ROOT / "shape_predictor_68_face_landmarks.dat"))
+    try:
+        with open_capture(0) as capture:
+            while True:
+                ok, frame = capture.read()
+                if not ok or frame is None:
+                    raise RuntimeError("Камера перестала выдавать кадры.")
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                for face in detector(gray):
+                    landmarks = predictor(gray, face)
+                    left, right = landmarks.part(31), landmarks.part(35)
+                    center = landmarks.part(30)
+                    width = int(hypot(left.x - right.x, left.y - right.y) * 1.7)
+                    overlay_nose(frame, nose, (center.x, center.y), width, cv2)
+                cv2.imshow("Pig nose — Esc to stop", frame)
+                if cv2.waitKey(1) & 0xFF == 27:
+                    break
+    finally:
+        cv2.destroyAllWindows()
 
-        # cv2.imshow("Nose area", nose_area)
-        # cv2.imshow("Nose pig", nose_pig)
-        # cv2.imshow("final nose", final_nose)
 
-    cv2.imshow("Frame", frame)
-
-    key = cv2.waitKey(1)
-    if key == 27:
-        break
+if __name__ == "__main__":
+    main()

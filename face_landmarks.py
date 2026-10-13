@@ -1,48 +1,32 @@
-import sys
-import cv2
-import dlib
+"""Standalone landmark demo. Escape exits; the camera is always released."""
+from face_app.capture import open_capture
+from face_app.config import PROJECT_ROOT
 
 
 def face_landmarks():
-    video_capture = cv2.VideoCapture(0)
-
-    if not video_capture.isOpened():
-        sys.exit('Камера не найдена')
+    import cv2
+    import dlib
 
     detector = dlib.get_frontal_face_detector()
+    predictor = dlib.shape_predictor(str(PROJECT_ROOT / "shape_predictor_68_face_landmarks.dat"))
+    try:
+        with open_capture(0) as capture:
+            while True:
+                ok, frame = capture.read()
+                if not ok or frame is None:
+                    raise RuntimeError("Камера перестала выдавать кадры.")
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                for face in detector(gray):
+                    landmarks = predictor(gray, face)
+                    for index in range(68):
+                        point = landmarks.part(index)
+                        cv2.circle(frame, (point.x, point.y), 3, (255, 0, 0), -1)
+                cv2.imshow("Face landmarks — Esc to stop", frame)
+                if cv2.waitKey(1) & 0xFF == 27:
+                    break
+    finally:
+        cv2.destroyAllWindows()
 
-    predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
-    while True:
-        ret, frame = video_capture.read()
-
-        face_coord = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        faces = detector(face_coord)
-
-        for face in faces:
-            x1 = face.left()
-            y1 = face.top()
-            x2 = face.right()
-            y2 = face.bottom()
-
-            # cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 3)
-
-            landmarks = predictor(face_coord, face)
-
-            for n in range(0, 68):
-                x = landmarks.part(n).x
-                y = landmarks.part(n).y
-                cv2.circle(frame, (x, y), 3, (255, 0, 0), -1)
-                # circle = cv2.circle(frame, (x, y), 120, (255, 0, 0), -1)
-                # cv2.rectangle(frame, (x1,y1), (x2, y2), (255, 0, 0), 3)
-
-                # frame = cv2.bitwise_and(frame, frame, mask=circle)
-
-        cv2.imshow('video', frame)
-
-        if cv2.waitKey(1) == 27:
-            break
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     face_landmarks()

@@ -1,0 +1,16 @@
+.venv/
+.venv-tk/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+/data/
+/backups/
+/checks/
+/face-backup-*.zip
+/faces/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.pkl
